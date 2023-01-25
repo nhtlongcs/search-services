@@ -69,3 +69,4 @@ USER $USERNAME
 # give permission to user
 RUN conda init bash
 RUN python download_ckpt.py $CLIP_VERSION
+

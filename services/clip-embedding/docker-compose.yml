@@ -1,0 +1,15 @@
+version: '3'
+services:
+  clip:
+    container_name: first-clip
+    image: first-clip:latest
+    ports:
+     - "7777:7777"
+    command: ["uvicorn", "main:app", "--reload", "--port", "7777", "--host", "0.0.0.0"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0', '1']
+            capabilities: [gpu]
