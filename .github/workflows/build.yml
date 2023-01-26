@@ -28,8 +28,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v3
         with:
-          context: services/clip-embedding
-          file: ./Dockerfile
+          context: services/clip-embedding/
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: nhtlongcs/first-clip:latest
