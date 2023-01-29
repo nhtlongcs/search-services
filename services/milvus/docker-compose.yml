@@ -4,6 +4,8 @@ services:
   milvus:
     image: milvusdb/milvus:1.1.1-gpu-d061621-330cc6
     container_name: first-milvus_gpu_1.1.1
+    env_file: 
+      - .env
     restart: always
     privileged: true
     environment:
