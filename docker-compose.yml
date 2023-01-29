@@ -1,0 +1,76 @@
+version: '3'
+services:
+  clip:
+    container_name: first-clip
+    image: nhtlongcs/first-clip:latest
+    env_file: 
+      - .env
+    ports:
+     - "7777:${CLIP_PORT}"
+    command: ["uvicorn", "main:app", "--reload", "--port", "7777", "--host", "0.0.0.0"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
+
+  elasticsearch:
+    image: elasticsearch:$ELASTIC_VERSION
+    env_file: 
+      - .env
+    environment:
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+      - xpack.security.enabled=$ELASTIC_SECURITY
+      - cluster.routing.allocation.disk.threshold_enabled=false # disable disk threshold (https://www.elastic.co/guide/en/elasticsearch/reference/current/disk-allocator.html)
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+    networks: ['stack']
+
+  kibana:
+    image: kibana:$ELASTIC_VERSION
+    env_file: 
+      - .env
+    environment:
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=$ELASTIC_PASSWORD
+    ports: ['5601:5601']
+    networks: ['stack']
+    links: ['elasticsearch']
+    depends_on: ['elasticsearch']
+  
+  milvus:
+    image: milvusdb/milvus:1.1.1-gpu-d061621-330cc6
+    container_name: first-milvus_gpu_1.1.1
+    env_file: 
+      - .env
+    restart: always
+    privileged: true
+    environment:
+      - TZ=Asia/Shanghai
+    ports:
+      - "19530:19530"
+      - "19121:19121"
+    volumes:
+      - $DOCKER_VOLUME_DIRECTORY/milvus/db:/var/lib/milvus/db
+      - $DOCKER_VOLUME_DIRECTORY/milvus/conf:/var/lib/milvus/conf
+      - $DOCKER_VOLUME_DIRECTORY/milvus/logs:/var/lib/milvus/logs
+      - $DOCKER_VOLUME_DIRECTORY/milvus/wal:/var/lib/milvus/wal
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
+
+networks:
+  stack: {}
