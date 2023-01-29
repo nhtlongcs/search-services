@@ -6,8 +6,8 @@ services:
     env_file: 
       - .env
     ports:
-     - "7777:${CLIP_PORT}"
-    command: ["uvicorn", "main:app", "--reload", "--port", "7777", "--host", "0.0.0.0"]
+     - "${CLIP_PORT}:${CLIP_PORT}"
+    command: ["uvicorn", "main:app", "--reload", "--port", "${CLIP_PORT}", "--host", "0.0.0.0"]
     deploy:
       resources:
         reservations:
@@ -17,6 +17,7 @@ services:
             capabilities: [gpu]
 
   elasticsearch:
+    container_name: first-elasticsearch
     image: elasticsearch:$ELASTIC_VERSION
     env_file: 
       - .env
@@ -32,33 +33,21 @@ services:
         soft: -1
         hard: -1
     ports:
-      - 9200:9200
+      - ${ELASTIC_PORT}:9200
     networks: ['stack']
-
-  kibana:
-    image: kibana:$ELASTIC_VERSION
-    env_file: 
-      - .env
-    environment:
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=$ELASTIC_PASSWORD
-    ports: ['5601:5601']
-    networks: ['stack']
-    links: ['elasticsearch']
-    depends_on: ['elasticsearch']
   
   milvus:
+    container_name: first-milvus
     image: milvusdb/milvus:1.1.1-gpu-d061621-330cc6
     container_name: first-milvus_gpu_1.1.1
     env_file: 
       - .env
     restart: always
-    privileged: true
     environment:
       - TZ=Asia/Shanghai
     ports:
-      - "19530:19530"
-      - "19121:19121"
+      - "${MILVUS_PORT}:19530"
+      # - "19121:19121"
     volumes:
       - $DOCKER_VOLUME_DIRECTORY/milvus/db:/var/lib/milvus/db
       - $DOCKER_VOLUME_DIRECTORY/milvus/conf:/var/lib/milvus/conf
