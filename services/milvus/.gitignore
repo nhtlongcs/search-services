@@ -1,0 +1,2 @@
+volumes/*
+!volumes/milvus/conf/server_config.yaml
