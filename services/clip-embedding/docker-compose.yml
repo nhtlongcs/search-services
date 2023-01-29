@@ -6,8 +6,8 @@ services:
     env_file: 
       - .env
     ports:
-     - "7777:${CLIP_PORT}"
-    command: ["uvicorn", "main:app", "--reload", "--port", "7777", "--host", "0.0.0.0"]
+     - "${CLIP_PORT}:${CLIP_PORT}"
+    command: ["uvicorn", "main:app", "--reload", "--port", "${CLIP_PORT}", "--host", "0.0.0.0"]
     deploy:
       resources:
         reservations:

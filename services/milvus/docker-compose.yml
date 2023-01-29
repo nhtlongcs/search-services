@@ -2,6 +2,7 @@ version: '3'
 
 services:
   milvus:
+    container_name: first-milvus
     image: milvusdb/milvus:1.1.1-gpu-d061621-330cc6
     container_name: first-milvus_gpu_1.1.1
     env_file: 
@@ -11,8 +12,8 @@ services:
     environment:
       - TZ=Asia/Shanghai
     ports:
-      - "19530:19530"
-      - "19121:19121"
+      - "${MILVUS_PORT}:19530"
+      # - "${MILVUS_PORT}:19121"
     volumes:
       - $DOCKER_VOLUME_DIRECTORY/milvus/db:/var/lib/milvus/db
       - $DOCKER_VOLUME_DIRECTORY/milvus/conf:/var/lib/milvus/conf

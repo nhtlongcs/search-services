@@ -1,6 +1,7 @@
 version: '3'
 services:
   elasticsearch:
+    container_name: first-elasticsearch
     image: elasticsearch:$ELASTIC_VERSION
     env_file: 
       - .env
@@ -16,20 +17,20 @@ services:
         soft: -1
         hard: -1
     ports:
-      - 9200:9200
+      - $ELASTIC_PORT:9200
     networks: ['stack']
 
-  kibana:
-    image: kibana:$ELASTIC_VERSION
-    env_file: 
-      - .env
-    environment:
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=$ELASTIC_PASSWORD
-    ports: ['5601:5601']
-    networks: ['stack']
-    links: ['elasticsearch']
-    depends_on: ['elasticsearch']
+  # kibana:
+  #   image: kibana:$ELASTIC_VERSION
+  #   env_file: 
+  #     - .env
+  #   environment:
+  #     - ELASTICSEARCH_USERNAME=elastic
+  #     - ELASTICSEARCH_PASSWORD=$ELASTIC_PASSWORD
+  #   ports: ['5601:5601']
+  #   networks: ['stack']
+  #   links: ['elasticsearch']
+  #   depends_on: ['elasticsearch']
 
 networks:
   stack: {}
