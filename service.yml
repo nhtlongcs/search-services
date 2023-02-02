@@ -24,9 +24,10 @@ dependencies:
   - pytest
   - elasticsearch=7.13.4
   - python-dotenv
-  - pymilvus=1.1.0 # compatible with milvus 1.1.0 (which this repo uses)
+  # - pymilvus=1.1.0 # compatible with milvus 1.1.0 (which this repo uses)
+  - pymilvus=2.1.0 # compatible with milvus 2.1.0 (which this repo uses)
   - requests
   - tqdm
   - numpy
-  - notebook 
+  - notebook
   - pandas
