@@ -1,0 +1,229 @@
+import json
+from pysearch.utils.time import time_this
+from typing import Dict, List, Any, Optional
+from pysearch.base.processor import Processor
+from milvus import Milvus, IndexType, MetricType, Status
+import logging
+from tqdm import tqdm
+import numpy as np 
+
+logger = logging.getLogger(__name__)
+
+class MilvusProcessor(Processor):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        assert 'DIMENSION' in config, "DIMENSION is not defined in config"
+        # self.generator = MilvusQueryGenerator(self.client, config)
+        # self.analyser = MilvusQueryAnalyser(self.generator)
+        self.index_file_size = config.get('INDEX_FILE_SIZE', 2048)
+        self.dimension = config['DIMENSION']
+
+        self.cache_dir = self.cache_dir / 'milvus'
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        
+        self.name2id = {} # Milvus requires id to be int, so we need to map id to name and vice versa
+        self.id2name = {}
+        self.client = self._connect()
+
+    def index_document(self, batch_document, ids=None):
+        super().index_document(batch_document)
+        status, batch_ids = self.client.insert(collection_name=self.index, records=batch_document, ids=ids)
+        while not status.OK():
+            status, batch_ids = self.client.insert(collection_name=self.index, records=batch_document, ids=ids)
+        return batch_ids
+
+    def index_list_document(self, document_list, raw_ids=None):
+        # Insert by batch since milvus only support 256MB inserts at a time
+        assert isinstance(document_list, np.ndarray), "Document list must be numpy array"
+        assert len(document_list.shape) == 2, "Document list must be 2D array"
+        assert document_list.shape[1] == self.dimension, "Document list must have the same dimension as the index"
+        
+        n = len(document_list)
+        bs = n // 256 if n > 256 else n
+        all_ids = []
+
+        for i in tqdm(range(0, n, bs)):
+            batch = np.array(document_list[i:i+bs], dtype=np.float32)
+            batch_ids = [i for i in range(i, i+bs)]
+            batch_ids = self.index_document(batch, batch_ids)
+            all_ids.extend(batch_ids)
+
+        assert len(all_ids) == n, "Number of ids is not equal to number of documents"
+        
+        self.name2id.update({k: v for k, v in zip(raw_ids, all_ids)})
+        self.id2name.update({v: k for k, v in self.name2id.items()})
+        
+        collection_path = self.cache_dir / f'{self.index}.json'
+        collection_path.write_text(json.dumps(self.name2id))
+
+        self.client.create_index(self.index, IndexType.IVF_FLAT, params={"nlist": 2048}) #noqa
+    
+    def search(self, query_embedding: np.ndarray, search_param: Optional[dict] = None, top_k: int = 2048, return_distance: bool = True):
+        
+        if len(query_embedding.shape) != 2:
+            logger.critical("Invalid shape for feature vector!")
+            return None
+        
+        search_param = {"nprobe": min(1024, top_k)} if search_param is None else search_param
+        
+        param = {
+            'collection_name': self.index,
+            'query_records': query_embedding,
+            'top_k': top_k,
+            'params': search_param,
+        }
+
+        status, results = self.client.search(**param)
+        # convert milvus id to raw id 
+        if status.OK():
+            # we only use the first element of the result matrix 
+            # because we only query using 1 vector
+            logger.info("Milvus search successful!")
+            raw_ids = [self.id2name[i] for i in results.id_array[0]]
+            if return_distance: 
+                return (raw_ids, results.distance_array[0])
+            return raw_ids
+        
+        logger.warning(f"Milvus search unsuccessful! Params were {self.collection_name=}, {query_embedding.shape}")
+        return None
+    
+    def ping(self):
+        return self.client.server_status()
+    
+    def _connect(self):
+
+        client = Milvus(host=self.host, port=self.port)
+        collection_name = self.index
+        status, ok = client.has_collection(collection_name)
+
+        if ok:
+            logging.warning(f"Collection {collection_name} already exists! Drop collection to re-create.")
+            collection_path = self.cache_dir / f'{collection_name}.json'
+            if collection_path.exists(): 
+                self.name2id = json.loads(collection_path.read_text())
+                self.id2name = {v: k for k, v in self.name2id.items()}
+            else: 
+                logging.warning(f"Collection {collection_name} is not cached. Cannot mapping id to the server. Re-create collection from scratch.")
+                client.drop_collection(collection_name)
+                ok = False
+        
+        if not ok:
+            client.create_collection({
+                "collection_name": collection_name,
+                "dimension": self.dimension,
+                "index_file_size": self.index_file_size,
+                "metric_type": MetricType.L2,
+            })
+
+        return client
+    
+    def info(self):
+        super().info()
+        _, collection = self.client.get_collection_info(self.index)
+        return collection
+
+
+class Milvus2Processor(Processor):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        assert 'DIMENSION' in config, "DIMENSION is not defined in config"
+        # self.generator = MilvusQueryGenerator(self.client, config)
+        # self.analyser = MilvusQueryAnalyser(self.generator)
+        self.index_file_size = config.get('INDEX_FILE_SIZE', 2048)
+        self.dimension = config['DIMENSION']
+
+        self.cache_dir = self.cache_dir / 'milvus'
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+                
+        self.client = self._connect()
+        self.collection = None
+    def drop(self):
+        if utility.list_collections() == [self.index]:
+            utility.drop_collection(self.index)
+
+
+    def index_document(self, batch_document, ids=None):
+        super().index_document(batch_document)
+        info = self.collection.insert(batch_document)
+        return info
+
+    def index_list_document(self, document_list, raw_ids=None):
+        # Insert by batch since milvus only support 256MB inserts at a time
+        
+        n = len(document_list)
+        bs = n // 256 if n > 256 else n
+        raw_ids = raw_ids if raw_ids is not None else [i for i in range(n)]
+        pbar=tqdm(range(0, n, bs))
+        for i in pbar:
+            data = [
+                raw_ids[i:i+bs], document_list[i:i+bs]
+            ]
+            info = self.index_document(data)
+            pbar.set_description(str(info))
+
+        self.client.create_index(self.index, IndexType.IVF_FLAT, params={"nlist": 2048}) #noqa
+    
+    def search(self, query_embedding: np.ndarray, search_param: Optional[dict] = None, top_k: int = 2048, return_distance: bool = True):
+        
+        if len(query_embedding.shape) != 2:
+            logger.critical("Invalid shape for feature vector!")
+            return None
+        
+        search_param = {"nprobe": min(1024, top_k)} if search_param is None else search_param
+        
+        param = {
+            'collection_name': self.index,
+            'query_records': query_embedding,
+            'top_k': top_k,
+            'params': search_param,
+        }
+
+        status, results = self.client.search(**param)
+        # convert milvus id to raw id 
+        if status.OK():
+            # we only use the first element of the result matrix 
+            # because we only query using 1 vector
+            logger.info("Milvus search successful!")
+            raw_ids = [self.id2name[i] for i in results.id_array[0]]
+            if return_distance: 
+                return (raw_ids, results.distance_array[0])
+            return raw_ids
+        
+        logger.warning(f"Milvus search unsuccessful! Params were {self.collection_name=}, {query_embedding.shape}")
+        return None
+    
+    def ping(self):
+        return self.client.server_status()
+    
+    def _connect(self):
+
+        client = Milvus(host=self.host, port=self.port)
+        collection_name = self.index
+        status, ok = client.has_collection(collection_name)
+
+        if ok:
+            logging.warning(f"Collection {collection_name} already exists! Drop collection to re-create.")
+            collection_path = self.cache_dir / f'{collection_name}.json'
+            if collection_path.exists(): 
+                self.name2id = json.loads(collection_path.read_text())
+                self.id2name = {v: k for k, v in self.name2id.items()}
+            else: 
+                logging.warning(f"Collection {collection_name} is not cached. Cannot mapping id to the server. Re-create collection from scratch.")
+                client.drop_collection(collection_name)
+                ok = False
+        
+        if not ok:
+            client.create_collection({
+                "collection_name": collection_name,
+                "dimension": self.dimension,
+                "index_file_size": self.index_file_size,
+                "metric_type": MetricType.L2,
+            })
+
+        return client
+    
+    def info(self):
+        super().info()
+        _, collection = self.client.get_collection_info(self.index)
+        return collection
