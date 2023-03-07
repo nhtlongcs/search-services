@@ -1,9 +1,12 @@
 import logging
 import base64
+import requests
 
 import torch
 import clip
+from PIL import Image
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -33,5 +36,32 @@ def encode_text(text: str):
 
     # features have type float16
     encoded = base64.b64encode(features)
-
     return {"encoded_features": encoded}
+
+def encode_image(image: Image.Image):
+    image = preprocess(image).unsqueeze(0).to(device)
+    with torch.no_grad():
+        image_feature = model.encode_image(image)
+        image_feature = image_feature / image_feature.norm(dim=1, keepdim=True)
+    features = image_feature.cpu().numpy()
+
+    # features have type float16
+    encoded = base64.b64encode(features)
+    return {"encoded_features": encoded}
+
+class ImageItem(BaseModel):
+    url: str = None
+
+@app.post("/api/image")
+def download_image(url: ImageItem):
+    return Image.open(requests.get(url, stream=True).raw)
+
+
+# def encode_images(images):
+#     images = torch.stack([
+#         preprocess(image) for image in images
+#     ]).to(device)
+#     with torch.no_grad():
+#         image_feature = model.encode_image(images)
+#         image_feature = image_feature / image_feature.norm(dim=1, keepdim=True)
+#     return image_feature.detach().cpu()
