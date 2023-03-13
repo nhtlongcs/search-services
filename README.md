@@ -29,10 +29,10 @@ docker-compose ps
 
 ## Check the logs of the services
 ```bash
-docker-compose logs -f
+docker logs -f
 ```
 
 ## Check the logs of a specific service
 ```bash
-docker-compose logs -f <service-name>
+docker logs -f <service-name>
 ```
