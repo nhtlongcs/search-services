@@ -62,6 +62,27 @@ class QueryGenerator:
             self.FILTER.append(pattern)
         else:
             self.MUST.append(pattern)
+    
+    def gen_closest_time_query(self, field, value):
+        # closest value with smallest distance
+        pattern = {
+            "functions": [
+                {
+                "linear": {
+                    field : {
+                        "origin": value,
+                        "scale": "28800m"
+                    }
+                }
+                }
+            ],
+            "score_mode" : "multiply",
+            "boost_mode": "multiply",
+            "query": {
+                "match_all": {}
+            }
+        }
+        self.FUNCTION_SCORE = pattern
 
 
     def gen_range_query(self, field, value_from, value_to, value_format, is_filter=True): 
@@ -91,6 +112,7 @@ class QueryGenerator:
         self.SHOULD = []
         self.FILTER = []
         self.DOCUMENT_IDS = []
+        self.FUNCTION_SCORE = None
 
     def add_document_set(self, document_set):
         self.DOCUMENT_IDS = document_set
@@ -103,7 +125,7 @@ class QueryGenerator:
 
     @time_this
     def run(self, profiler=False):
-        query = {}
+        query = {'query': {}}
         bool_query = {}
         if len(self.MUST) > 0:
             bool_query["must"] = self.MUST
@@ -111,8 +133,11 @@ class QueryGenerator:
             bool_query["should"] = self.SHOULD
         if len(self.FILTER) > 0:
             bool_query["filter"] = self.FILTER
-        query["query"] = {"bool": bool_query}
-
+        if len(bool_query) > 0:
+            query["query"] = {"bool": bool_query}
+        if self.FUNCTION_SCORE:
+            query["query"].update({"function_score": self.FUNCTION_SCORE})
+                          
         if profiler:
             query["profile"] = False
         return query

@@ -7,6 +7,7 @@ import argparse
 from pysearch.base.processor import Processor
 from tqdm import tqdm 
 from typing import List, Dict, Any, Union, Optional
+from datetime import datetime
 
 class ElasticProcessor(Processor):
     def __init__(self, config):
@@ -57,7 +58,8 @@ class ElasticProcessor(Processor):
     Main function for searching in elasticsearch
     """
     @time_this
-    def search(self, text_query, fields, filter=None, time_range=None):
+    def search(self, timefield, timestamp=None):
+    # def search(self, text_query, fields, filter=None, timestamp=None):
         """
             text_query: string
             filter: list of document ids
@@ -68,9 +70,9 @@ class ElasticProcessor(Processor):
         """
         self.generator = QueryGenerator(self.client, self.index)
         # self.generator.reset_query()
-        self._filter(filter)
-        self._search_normal_fields(fields, text_query, text_query)
-        # self._search_time_fields(fields, time_range)
+        # self._filter(filter)
+        # self._search_normal_fields(fields, text_query, text_query)
+        self._search_time_fields(timefield, timestamp)
         query = self.generator.run(profiler=False)
         print(query)
         result = self.client.search(index=self.index, body=json.dumps(query), size=self.return_size)
@@ -81,6 +83,8 @@ class ElasticProcessor(Processor):
             self.generator.add_document_set(filter)
 
     def _search_normal_fields(self, fields, must_part, should_part):
+        # https://stackoverflow.com/questions/28768277/elasticsearch-difference-between-must-and-should-bool-query
+
         assert isinstance(fields, list), "fields must be a list"
         assert isinstance(must_part, str), "must_part must be a string, only one string is allowed"
         assert isinstance(should_part, str), "should_part must be a string, only one string is allowed"
@@ -90,12 +94,17 @@ class ElasticProcessor(Processor):
         self.generator.gen_query_string_query(fields, must_part, False)
         self.generator.gen_query_string_query(fields, should_part, True)
     
-    def _search_time_fields(self, fields, time_range):
+    def _search_time_fields(self, timefield, timestamp):
+        def _search_closest_time_field(timefield, timestamp):
+            assert isinstance(timestamp, datetime), "timestamp must be a datetime object"
+            timestamp = timestamp.strftime("%Y%m%d")
+            self.generator.gen_closest_time_query(timefield, timestamp)
+        _search_closest_time_field(timefield, timestamp)
         # value_from, value_to = time_range
         # self.generator.gen_range_query(value_type, value_from, value_to, value_format)
         # self.generator.gen_time_query(fields, must_parts, False)
         # self.generator.gen_time_query(fields, should_parts, True)
-        assert NotImplementedError, "Time query is not available yet"
+        # assert NotImplementedError, "Time query is not available yet"
     
     def info(self):
         super().info()
