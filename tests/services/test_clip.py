@@ -19,11 +19,11 @@ def test_text_encode(text = "a funny man with a hat"):
     response = response.json() 
     assert response['encoded_features'] is not None
 
-def test_download_image(url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png"):
+def test_encode_image(image_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png"):
     api = f"api/image"
     url = f"http://localhost:{CLIP_PORT}/{api}"
-    response = requests.post(url, json={"url": url})
+    response = requests.post(url, json={"url": image_url})
     assert response.status_code == 200
 
     response = response.json() 
-    print(response)
+    assert response['encoded_features'] is not None

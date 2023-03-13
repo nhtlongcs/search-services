@@ -38,7 +38,12 @@ def encode_text(text: str):
     encoded = base64.b64encode(features)
     return {"encoded_features": encoded}
 
-def encode_image(image: Image.Image):
+class ImageItem(BaseModel):
+    url: str = None
+
+@app.post("/api/image")
+def encode_image(item: ImageItem):
+    image = Image.open(requests.get(item.url, stream=True).raw)
     image = preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         image_feature = model.encode_image(image)
@@ -48,14 +53,6 @@ def encode_image(image: Image.Image):
     # features have type float16
     encoded = base64.b64encode(features)
     return {"encoded_features": encoded}
-
-class ImageItem(BaseModel):
-    url: str = None
-
-@app.post("/api/image")
-def download_image(url: ImageItem):
-    return Image.open(requests.get(url, stream=True).raw)
-
 
 # def encode_images(images):
 #     images = torch.stack([
