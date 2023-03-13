@@ -95,16 +95,23 @@ class ElasticProcessor(Processor):
         self.generator.gen_query_string_query(fields, should_part, True)
     
     def _search_time_fields(self, timefield, timestamp):
-        def _search_closest_time_field(timefield, timestamp):
+        def _search_closest_time(timefield, timestamp):
             assert isinstance(timestamp, datetime), "timestamp must be a datetime object"
             timestamp = timestamp.strftime("%Y%m%d")
             self.generator.gen_closest_time_query(timefield, timestamp)
-        _search_closest_time_field(timefield, timestamp)
-        # value_from, value_to = time_range
-        # self.generator.gen_range_query(value_type, value_from, value_to, value_format)
-        # self.generator.gen_time_query(fields, must_parts, False)
-        # self.generator.gen_time_query(fields, should_parts, True)
-        # assert NotImplementedError, "Time query is not available yet"
+
+        def _search_time_range(timefield, timestamp):
+            from_, to_ = timestamp
+            from_ = from_.strftime("%Y%m%d")
+            to_ = to_.strftime("%Y%m%d")
+            self.generator.gen_range_query(timefield, from_, to_, 'basic_date')
+
+        if isinstance(timestamp, datetime):    
+            _search_closest_time(timefield, timestamp)
+        elif isinstance(timestamp, tuple) and list(map(type, timestamp)) == [datetime, datetime]:
+            _search_time_range(timefield, timestamp)
+        else:
+            raise ValueError("timestamp must be a datetime object or a tuple of datetime objects")
     
     def info(self):
         super().info()
