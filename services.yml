@@ -15,7 +15,7 @@
 # This is Conda environment file
 # Usage: `conda env update -f environment.yml`
 
-name: service
+name: services
 
 channels:
   - conda-forge
@@ -32,3 +32,7 @@ dependencies:
   - numpy
   - notebook
   - pandas
+  - pip  
+  - pip:
+    - fastapi
+    - e . # install the package in the current directory
