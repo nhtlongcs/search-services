@@ -1,1 +1,1 @@
-from .time import time_this
+from .time import *

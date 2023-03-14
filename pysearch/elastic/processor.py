@@ -27,7 +27,6 @@ class ElasticProcessor(Processor):
 
         self.client.indices.delete(index=self.index, ignore=[400, 404])
         self.client.indices.create(index=self.index, body=df_structure, ignore=400)
-        self.client.indices.get_alias("*")
 
         def index_iterator(df):
             for i, row in tqdm(df.iterrows(), total=len(df)):
@@ -64,7 +63,15 @@ class ElasticProcessor(Processor):
         """
         return self.search_text_inrange_pipeline(**kwargs)
     
-
+    def available_fields(self):
+        return list(self.client.indices.get_mapping(index=self.index)[self.index]['mappings']['properties'].keys())
+    
+    def _field_properties(self, field):
+        return self.client.indices.get_mapping(index=self.index)[self.index]['mappings']['properties'][field]
+    
+    def _field_type(self, field):
+        return self._field_properties(field)['type']
+    
     def search_filter_only(self, filter: List[str]):
         """
             Example: search_filter_only(['image1', 'image2'])
@@ -141,10 +148,11 @@ class ElasticProcessor(Processor):
                 self._search_time_fields(query['time']['field'], (query['time']['start'], query['time']['end']))
     
         if query.get('text') is not None:
+            if query['text']['fields'] is None or len(query['text']['fields']) == 0:
+                query['text']['fields'] = self.available_fields()
             self._search_normal_fields(query['text']['fields'], query['text']['must'], query['text']['should'])
 
         query = self.generator.run(profiler=False)
-        import pdb; pdb.set_trace()
         result = self.client.search(index=self.index, body=json.dumps(query), size=topk)
         return result['hits']['hits']
 
@@ -154,6 +162,13 @@ class ElasticProcessor(Processor):
 
     def _search_normal_fields(self, fields, must_part, should_part):
         # https://stackoverflow.com/questions/28768277/elasticsearch-difference-between-must-and-should-bool-query
+        # only support string field
+        
+        _fields = fields.copy()
+        fields = []
+        for i, field in enumerate(_fields):
+            if self._field_type(field) == 'text':
+                fields.append(field)
 
         assert isinstance(fields, list), "fields must be a list"
 
@@ -166,6 +181,10 @@ class ElasticProcessor(Processor):
             self.generator.gen_query_string_query(fields, should_part, True)
     
     def _search_time_fields(self, timefield, timestamp):
+        # only support date field, basic_date format
+        if self._field_type(timefield) != 'date':
+            raise Exception("timefield must be a date field")
+
         def _search_closest_time(timefield, timestamp):
             assert isinstance(timestamp, datetime), "timestamp must be a datetime object"
             timestamp = timestamp.strftime("%Y%m%d")
@@ -189,8 +208,15 @@ class ElasticProcessor(Processor):
         else:
             raise ValueError("timestamp must be a datetime object or a tuple of datetime objects")
     
+    def kill(self, index_name: str):
+        self.client.indices.delete(index=index_name, ignore=[400, 404])
+    
+    def available_indices(self):        
+        return self.client.indices.get_alias("*").keys()
+    
     def info(self):
         super().info()
+        return self.client.indices.get_mapping(index=self.index)[self.index]['mappings']
 
     @time_this
     def get_document_by_id(self, ids):

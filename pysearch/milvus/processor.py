@@ -70,6 +70,8 @@ class Milvus2Processor(Processor):
         self.drop()
         self.collection = self.create_milvus_collection(self.index)
         self.update_list_document(document_list, raw_ids)
+        self.collection.load()
+
     
     @time_this
     def search(self, query_embedding: np.ndarray, top_k: Optional[int] = None, return_distance: bool = True, filter: Optional[List[str]] = None):
@@ -111,7 +113,10 @@ class Milvus2Processor(Processor):
             host=self.host,
             port=self.port,
         )
-    
+        
+    def kill(self, collection_name):
+        utility.drop_collection(collection_name)
+
     def info(self):
         super().info()
 
@@ -122,5 +127,6 @@ class Milvus2Processor(Processor):
         return {
             "name": self.collection.name,
             "description": self.collection.description,
-            "num_entities": self.collection.num_entities
+            "num_entities": self.collection.num_entities,
+            "collections": utility.list_collections()
         }
