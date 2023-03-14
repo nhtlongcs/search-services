@@ -58,26 +58,96 @@ class ElasticProcessor(Processor):
     Main function for searching in elasticsearch
     """
     @time_this
-    def search(self, timefield, timestamp=None):
-    # def search(self, text_query, fields, filter=None, timestamp=None):
+    def search(self, **kwargs):
         """
-            text_query: string
-            filter: list of document ids
-
-            This function will return a list of documents that match the query
-            Text query is analysed by the analyser
-            Use filter to limit the search to a set of documents, if filter is None, document_set is ignored
+        Default search function is to search by text in time range
         """
-        self.generator = QueryGenerator(self.client, self.index)
-        # self.generator.reset_query()
-        # self._filter(filter)
-        # self._search_normal_fields(fields, text_query, text_query)
-        self._search_time_fields(timefield, timestamp)
-        query = self.generator.run(profiler=False)
-        print(query)
-        result = self.client.search(index=self.index, body=json.dumps(query), size=self.return_size)
-        return result['hits']['hits']
+        return self.search_text_inrange_pipeline(**kwargs)
     
+
+    def search_filter_only(self, filter: List[str]):
+        """
+            Example: search_filter_only(['image1', 'image2'])
+        """
+        return self.compose_pipeline({ 'filter': filter})
+
+    def search_text_closestday_pipeline(self, text_query: str, fields: List[str], filter: List[str], timefield: str, timestamp: datetime):
+        """
+            Example: search_text_inrange_pipeline('text', ['field1', 'field2'], \
+                ['image1', 'image2'], 'timestamp', '20200101', '20200110')
+            The steps are:
+            1. Filter by document set
+            2. Search by scoring (text in fields and time)
+            3. Return the result
+        """
+        return  self.compose_pipeline({'filter': filter, 'text': {'fields': fields, 'should': text_query, 'must': None}, \
+                                       'time': {'field': timefield, 'timestamp': timestamp}})
+    
+    def search_text_inrange_pipeline(self, text_query: str, fields: List[str], filter: List[str], \
+                                     timefield: str, start: datetime, end: datetime):
+
+        """
+            Example: search_text_inrange_pipeline('text', ['field1', 'field2'], \
+                ['image1', 'image2'], 'timestamp', '20200101', '20200110')
+            The steps are:
+            1. Filter by document set
+            2. Filter by time range
+            3. Search text in fields
+            4. Return the result
+        """
+        return self.compose_pipeline({  'filter': filter, 'time': {'field': timefield, 'start': start, 'end': end}, \
+                                        'text': {'fields': fields, 'should': text_query, 'must': None}})
+
+    def search_timestamp_pipeline(self, timefield: str, timestamp: datetime, filter: List[str]):
+        """
+            Example: search_time_range_pipeline('timestamp', '20200101', '20200110', ['image1', 'image2'])
+            The steps are:
+            1. Filter by document set
+            2. Find top nearest timestamp
+            3. Return the result
+        """
+        return self.compose_pipeline({'filter': filter, 'time': {'field': timefield, 'timestamp': timestamp}})
+    
+    def search_time_range_pipeline(self, timefield: str, start: datetime, end: datetime, filter: List[str]):
+        """
+            Example: search_time_range_pipeline('timestamp', '20200101', '20200110', ['image1', 'image2'])
+            The steps are:
+            1. Filter by document set
+            2. Filter by time range
+            3. Return the result
+        """
+        return self.compose_pipeline({'filter': filter, 'time': {'field': timefield, 'start': start, 'end': end}})
+
+    def compose_pipeline(self, query: dict, topk: Optional[int] = None):
+        """
+            Example: compose_pipeline({'filter': ['image1', 'image2'], \
+                'time': {'field': 'timestamp', 'start': '20200101', 'end': '20200110'}, \
+                'text': {'fields': ['field1', 'field2'], 'must': 'text1', 'should': 'text2'}})
+            The steps are:
+            1. Filter by document set
+            2. Filter by time range
+            3. Search text in fields
+            4. Return the result
+        """
+        topk = self.return_size if topk is None else topk
+        self.generator = QueryGenerator(self.client, self.index)
+        assert len(query) > 0, "Query cannot be empty"
+        if query.get('filter') is not None:
+            self._filter(query['filter'])
+        if query.get('time') is not None:
+            if 'timestamp' in query['time'].keys():
+                self._search_time_fields(query['time']['field'], query['time']['timestamp'])
+            else:
+                self._search_time_fields(query['time']['field'], (query['time']['start'], query['time']['end']))
+    
+        if query.get('text') is not None:
+            self._search_normal_fields(query['text']['fields'], query['text']['must'], query['text']['should'])
+
+        query = self.generator.run(profiler=False)
+        import pdb; pdb.set_trace()
+        result = self.client.search(index=self.index, body=json.dumps(query), size=topk)
+        return result['hits']['hits']
+
     def _filter(self, filter: Optional[List[str]] = None):
         if filter is not None and len(filter) > 0 :
             self.generator.add_document_set(filter)
@@ -86,13 +156,14 @@ class ElasticProcessor(Processor):
         # https://stackoverflow.com/questions/28768277/elasticsearch-difference-between-must-and-should-bool-query
 
         assert isinstance(fields, list), "fields must be a list"
-        assert isinstance(must_part, str), "must_part must be a string, only one string is allowed"
-        assert isinstance(should_part, str), "should_part must be a string, only one string is allowed"
 
         # todo: check if fields are valid
-
-        self.generator.gen_query_string_query(fields, must_part, False)
-        self.generator.gen_query_string_query(fields, should_part, True)
+        if must_part is not None:
+            assert isinstance(must_part, str), "must_part must be a string, only one string is allowed"
+            self.generator.gen_query_string_query(fields, must_part, False)
+        if should_part is not None:
+            assert isinstance(should_part, str), "should_part must be a string, only one string is allowed"
+            self.generator.gen_query_string_query(fields, should_part, True)
     
     def _search_time_fields(self, timefield, timestamp):
         def _search_closest_time(timefield, timestamp):
@@ -104,8 +175,13 @@ class ElasticProcessor(Processor):
             from_, to_ = timestamp
             from_ = from_.strftime("%Y%m%d")
             to_ = to_.strftime("%Y%m%d")
+            # https://www.elastic.co/guide/en/elasticsearch/reference/2.0/mapping-date-format.html#built-in-date-formats
             self.generator.gen_range_query(timefield, from_, to_, 'basic_date')
-
+        
+        if timestamp is None or (isinstance(timestamp, tuple) and (timestamp[0] is None or timestamp[1] is None)):
+            # do nothing
+            return
+        
         if isinstance(timestamp, datetime):    
             _search_closest_time(timefield, timestamp)
         elif isinstance(timestamp, tuple) and list(map(type, timestamp)) == [datetime, datetime]:

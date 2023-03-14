@@ -136,7 +136,8 @@ class QueryGenerator:
         if len(bool_query) > 0:
             query["query"] = {"bool": bool_query}
         if self.FUNCTION_SCORE:
-            query["query"].update({"function_score": self.FUNCTION_SCORE})
+            query["query"] = {"function_score": self.FUNCTION_SCORE} 
+            query["query"]["function_score"]['query'] = {"bool": bool_query}
                           
         if profiler:
             query["profile"] = False
