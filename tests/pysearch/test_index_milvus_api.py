@@ -16,7 +16,7 @@ assert MILVUS_PORT is not None, "MILVUS_PORT is not set"
 from pysearch.milvus import Milvus2Processor as MilvusProcessor
 config = {
     # Global config
-    "HOST": "localhost",
+    "HOST": "0.0.0.0",
     "PORT": MILVUS_PORT,
     "INDEX": "test_index",
     "RETURN_SIZE": 10,

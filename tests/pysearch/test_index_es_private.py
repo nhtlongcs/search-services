@@ -1,5 +1,6 @@
 import requests
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 import numpy as np
@@ -27,21 +28,24 @@ config = {
     "INDEX": "test_index",
     "RETURN_SIZE": 10,
     "CACHE_DIR": ".cache/",
-    "DIMENSION": 768,
+    "DIMENSION": 2,
 }
 
 def test_index_document():
     
     def gendata(n: int = 10):
-        features = np.ones((n, 768), dtype=float)
+        features = np.ones((n, config['DIMENSION']), dtype=float)
         features = features * np.arange(n).reshape(-1, 1)
 
         # df from dict 
+        # datetime must be yyyyMMdd
+        # https://www.elastic.co/guide/en/elasticsearch/reference/2.0/mapping-date-format.html#built-in-date-formats
         df = pd.DataFrame.from_dict({
             'index':  [f'image{x}' for x in range(n)], \
             'field1': [f'string{x}' for x in range(n)], \
-            'field2': [x for x in range(n)], \
+            'field2': [f'string{x+1}' for x in range(n)], \
             'field3': [x for x in range(n)], \
+            'timestamp': [f'202001{x:02d}' for x in range(1,n+1)], \
             'feature': features.tolist() \
         })
         return df
@@ -52,36 +56,47 @@ def test_index_document():
             "properties": {
                 "index": {"type": "integer"},
                 "field1": {"type": "text"},
-                "field2": {"type": "integer"},
+                "field2": {"type": "text"},
                 "field3": {"type": "integer"},
-                "feature": {"type": "dense_vector", "dims": 768, "index": True, "similarity": "l2_norm"}
+                "timestamp": {"type": "date", "format": "basic_date"},
+                "feature": {"type": "dense_vector", "dims": config['DIMENSION'], "index": True, "similarity": "l2_norm"}
             }
         }
     }
 
     proc.index_dataframe(df, df_structure)
 
-def test_search():
+def test_filter():
     proc = ElasticProcessor(config)
     print(proc.info())
-    results = proc.search(text_query='string1', fields=['field1'])
+    results = proc.compose_pipeline({'filter': ['image1', 'image2']})
     from pprint import pprint
     pprint(results)
 
-def test_get_by_id():
-    proc = ElasticProcessor(config)
-    tmp = proc.get_document_by_id("image1")
-    from pprint import pprint
-    pprint(tmp)
-
-def test_search_filter():
+def test_timestamp():
     proc = ElasticProcessor(config)
     print(proc.info())
-    results = proc.search(text_query='string1', fields=['field1'], filter=['image2'])
+    results = proc.compose_pipeline({'time': {'field': 'timestamp', 'timestamp': datetime(2020, 1, 11)}}, topk=1)
     from pprint import pprint
     pprint(results)
 
-test_index_document()
-# test_search()
-# test_get_by_id()
-test_search_filter()
+def test_timerange():
+    proc = ElasticProcessor(config)
+    print(proc.info())
+    results = proc.compose_pipeline({'time': {'field': 'timestamp', 'start': datetime(2020, 1, 9), 'end': datetime(2020, 1, 11)}})
+    from pprint import pprint
+    pprint(results)
+
+def test_text_must():
+    proc = ElasticProcessor(config)
+    print(proc.info())
+    results = proc.compose_pipeline({'text': {'fields': ['field1', 'field2'], 'must': 'string1', 'should': None }})
+    from pprint import pprint
+    pprint(results)
+
+def test_text_should():
+    proc = ElasticProcessor(config)
+    print(proc.info())
+    results = proc.compose_pipeline({'text': {'fields': ['field1', 'field2'], 'must': 'string1', 'should': 'string0'}})
+    from pprint import pprint
+    pprint(results)
