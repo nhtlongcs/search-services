@@ -15,10 +15,8 @@ class Milvus2Processor(Processor):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         assert 'DIMENSION' in config, "DIMENSION is not defined in config"
-        # self.generator = MilvusQueryGenerator(self.client, config)
-        # self.analyser = MilvusQueryAnalyser(self.generator)
         self.dimension = config['DIMENSION']
-
+        self.topk = config['RETURN_SIZE']
         self.client = self._connect()
         self.collection = self.create_milvus_collection(self.index)
         self.collection.load()
@@ -54,7 +52,8 @@ class Milvus2Processor(Processor):
         super().index_document(batch_document)
         info = self.collection.insert(batch_document)
         return info
-
+    
+    @time_this
     def update_list_document(self, document_list, raw_ids=None):
         n = len(document_list)
         bs = n // 256 if n > 256 else n
@@ -66,13 +65,14 @@ class Milvus2Processor(Processor):
             ]
             info = self.index_document(data)
             pbar.set_description(str(info))
-
+    
     def index_list_document(self, document_list, raw_ids=None):
         self.drop()
         self.collection = self.create_milvus_collection(self.index)
         self.update_list_document(document_list, raw_ids)
     
-    def search(self, query_embedding: np.ndarray, top_k: int = 2048, return_distance: bool = True, filter: Optional[List[str]] = None):
+    @time_this
+    def search(self, query_embedding: np.ndarray, top_k: Optional[int] = None, return_distance: bool = True, filter: Optional[List[str]] = None):
         
         if len(query_embedding.shape) != 2:
             logger.critical("Invalid shape for feature vector!")
@@ -83,18 +83,24 @@ class Milvus2Processor(Processor):
         expr = None
         if filter is not None:
             expr = 'id in [' + ','.join([f'\"{id}\"' for id in filter]) + ']'
+        
+        if top_k is None:
+            top_k = self.topk
+        
+        assert top_k > 0, "top_k must be greater than 0"
 
         results = self.collection.search(
             data=query_embedding, 
             anns_field="embedding", 
             param=search_params, 
-            limit=100, 
+            limit=top_k, 
             expr= expr,
             consistency_level="Strong"
         )
+        hits = results[0]
         if return_distance:
-            return (results[0].ids, results[0].distances)
-        return results[0].ids
+            return (hits.ids, hits.distances)
+        return hits.ids
     
     def ping(self):
         return True 
@@ -109,14 +115,9 @@ class Milvus2Processor(Processor):
     def info(self):
         super().info()
 
-        # collection.schema                # Return the schema.CollectionSchema of the collection.
-        # collection.description           # Return the description of the collection.
         # collection.name                  # Return the name of the collection.
-        # collection.is_empty              # Return the boolean value that indicates if the collection is empty.
+        # collection.description           # Return the description of the collection.
         # collection.num_entities          # Return the number of entities in the collection.
-        # collection.primary_field         # Return the schema.FieldSchema of the primary key field.
-        # collection.partitions            # Return the list[Partition] object.
-        # collection.indexes               # Return the list[Index] object.
 
         return {
             "name": self.collection.name,
