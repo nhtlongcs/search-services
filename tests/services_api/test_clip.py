@@ -17,7 +17,7 @@ def test_text_encode(text = "a funny man with a hat"):
     assert response.status_code == 200
 
     response = response.json() 
-    assert response['encoded_features'] is not None
+    assert response['feature'] is not None
 
 def test_encode_image(image_url="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png"):
     api = f"api/image"
@@ -26,4 +26,4 @@ def test_encode_image(image_url="https://upload.wikimedia.org/wikipedia/commons/
     assert response.status_code == 200
 
     response = response.json() 
-    assert response['encoded_features'] is not None
+    assert response['feature'] is not None

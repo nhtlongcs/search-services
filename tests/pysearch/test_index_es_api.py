@@ -56,7 +56,7 @@ def test_index_document():
             "properties": {
                 "index": {"type": "integer"},
                 "field1": {"type": "text"},
-                "field2": {"type": "integer"},
+                "field2": {"type": "text"},
                 "field3": {"type": "integer"},
                 "timestamp": {"type": "date", "format": "basic_date"},
                 "feature": {"type": "dense_vector", "dims": config['DIMENSION'], "index": True, "similarity": "l2_norm"}
@@ -71,7 +71,7 @@ def test_search_text_inrange_pipeline():
     print(proc.info())
     results1 = proc.search_text_inrange_pipeline('string1', ['field1', 'field2'], timefield='timestamp', start=None, end=None, filter=None)
     results2 = proc.search_text_inrange_pipeline('string1', ['field1', 'field2'], timefield='timestamp', start=None, end=None, filter=['image0','image1','image2'])
-    results3 = proc.search_text_inrange_pipeline('string1', ['field1', 'field2'], timefield='timestamp', start=datetime(2020, 1, 1), end=datetime(2020, 1, 2), filter=['image0','image1','image2'])
+    results3 = proc.search_text_inrange_pipeline('string1', ['field1', 'field2', 'field3'], timefield='timestamp', start=datetime(2020, 1, 1), end=datetime(2020, 1, 2), filter=['image0','image1','image2'])
     from pprint import pprint
     pprint(results1)
     print('-'*80)
@@ -109,6 +109,3 @@ def test_search_timerange_pipeline():
     print('-'*80)
     pprint(results2)
 
-# test_search_text_inrange_pipeline()
-# test_search_text_closestday_pipeline()
-# test_search_timerange_pipeline()

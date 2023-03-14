@@ -1,15 +1,13 @@
 # write a code to index vector data into elasticsearch
-import pandas as pd 
-from elasticsearch.helpers import bulk
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-from elasticsearch import RequestError
-import numpy as np
-from tqdm import tqdm
-
 import os
-from dotenv import load_dotenv
 from pathlib import Path
-from elasticsearch import Elasticsearch, RequestsHttpConnection
+
+import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
+from elasticsearch import Elasticsearch, RequestError, RequestsHttpConnection
+from elasticsearch.helpers import bulk
+from tqdm import tqdm
 
 dotenv_path = Path('.env')
 load_dotenv(dotenv_path=dotenv_path)
@@ -152,7 +150,6 @@ def test_vector_search(index_name: str = 'test'):
         return es.search(index=index, body=body)['hits']['hits']
 
     print(query[:10])
-
 
     try:
         responses = search(query, index=index_name, top_k=10)

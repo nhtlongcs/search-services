@@ -1,8 +1,9 @@
-import requests
 import os
-from dotenv import load_dotenv
 from pathlib import Path
+
 import numpy as np
+import requests
+from dotenv import load_dotenv
 
 dotenv_path = Path('.env')
 load_dotenv(dotenv_path=dotenv_path)
@@ -14,6 +15,7 @@ assert CLIP_PORT is not None, "CLIP_PORT is not set"
 assert MILVUS_PORT is not None, "MILVUS_PORT is not set"
 
 from pysearch.milvus import Milvus2Processor as MilvusProcessor
+
 config = {
     # Global config
     "HOST": "0.0.0.0",
@@ -65,7 +67,3 @@ def test_search_filter():
     results = proc.search(query, top_k=10, filter=["image7", "image8", "image9"])
     from pprint import pprint
     pprint(results)
-
-test_index_document()
-test_search()
-test_search_filter()
