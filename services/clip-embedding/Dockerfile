@@ -2,7 +2,7 @@ FROM nvidia/cuda:11.6.1-base-ubuntu20.04
 
 # Package version control
 
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_VERSION=3.10
 ARG CUDA_VERSION=11.3
 ARG PYTORCH_VERSION=1.11
 ARG CUDA_CHANNEL=nvidia

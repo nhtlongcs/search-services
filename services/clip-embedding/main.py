@@ -1,12 +1,13 @@
 import logging
-import base64
 import requests
 
 import torch
 import clip
 from PIL import Image
-from fastapi import FastAPI
 from pydantic import BaseModel
+from starlite import Starlite, get, post
+
+from dtypes import FeatureModel
 
 logger = logging.getLogger(__name__)
 
@@ -18,42 +19,42 @@ model_name = "ViT-L/14@336px"
 model, preprocess = clip.load(model_name, device=device)
 
 logger.info(f"CLIP {model_name} successfully loaded")
-# add server name and port 
-app = FastAPI()
 
-@app.get("/")
-def read_root():
+@get("/")
+def read_root() -> dict[str, str]:
     return {"Hello": "World"}
 
-@app.get("/api/text/{text}")
-def encode_text(text: str):
+@get("/api/text/{text:str}")
+def encode_text(text: str) -> FeatureModel:
     logger.info(f"Encoding text {text}")
     with torch.no_grad():
         text_tokenized = clip.tokenize(text).to(device)
         text_feature = model.encode_text(text_tokenized)
         text_feature = text_feature / text_feature.norm(dim=1, keepdim=True)
-    features = text_feature.cpu().numpy()
-
     # features have type float16
-    encoded = base64.b64encode(features)
-    return {"encoded_features": encoded}
+    features = text_feature.cpu().numpy()
+    return FeatureModel.from_numpy(features)
+    
+    # encoded = base64.b64encode(features)
+    # return {"encoded_features": encoded}
 
 class ImageItem(BaseModel):
     url: str = None
 
-@app.post("/api/image")
-def encode_image(item: ImageItem):
+@post("/api/image")
+def encode_image(item: ImageItem) -> FeatureModel:
     image = Image.open(requests.get(item.url, stream=True).raw)
     image = preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         image_feature = model.encode_image(image)
         image_feature = image_feature / image_feature.norm(dim=1, keepdim=True)
-    features = image_feature.cpu().numpy()
-
     # features have type float16
-    encoded = base64.b64encode(features)
-    return {"encoded_features": encoded}
+    features = image_feature.cpu().numpy()
+    return FeatureModel.from_numpy(features)
 
+# add server name and port 
+app = Starlite(route_handlers=[read_root, encode_text, encode_image])
+    
 # def encode_images(images):
 #     images = torch.stack([
 #         preprocess(image) for image in images

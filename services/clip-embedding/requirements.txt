@@ -3,6 +3,6 @@ git+https://github.com/openai/CLIP.git
 ftfy
 regex
 tqdm
-# FastAPI
-fastapi
+# Required for the server
+starlite
 uvicorn
