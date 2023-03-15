@@ -22,7 +22,7 @@ def test_encode_image(image_url="https://upload.wikimedia.org/wikipedia/commons/
     api = f"api/image"
     url = f"http://localhost:{CLIP_PORT}/{api}"
     response = requests.post(url, json={"url": image_url})
-    assert response.status_code == 200, f"Request on {url} failed"
+    assert response.status_code == 201, f"Request on {url} failed"
 
     response = response.json() 
     assert response['feature'] is not None
