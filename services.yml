@@ -15,15 +15,16 @@
 # This is Conda environment file
 # Usage: `conda env update -f environment.yml`
 
-name: services
+name: services2
 
 channels:
   - conda-forge
 
 dependencies:
   - elasticsearch=7.13.4
-  # - elasticsearch-dsl
+  - elasticsearch-dsl
   - python-dotenv
+  - protobuf
   - requests
   - tqdm
   - numpy
@@ -34,4 +35,5 @@ dependencies:
   - pip:
   # - pymilvus=1.1.0 # compatible with milvus 1.1.0 (which deprecated)
     - pymilvus==2.1.0 # compatible with milvus 2.1.0 (which this repo uses)
+    - parsedatetime
     - -e . # install the package in the current directory
