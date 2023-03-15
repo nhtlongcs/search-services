@@ -38,12 +38,12 @@ def encode_text(text: str) -> FeatureModel:
     # encoded = base64.b64encode(features)
     # return {"encoded_features": encoded}
 
-class ImageItem(BaseModel):
+class ImageUrlModel(BaseModel):
     url: str = None
 
 @post("/api/image")
-def encode_image(item: ImageItem) -> FeatureModel:
-    image = Image.open(requests.get(item.url, stream=True).raw)
+def encode_image(data: ImageUrlModel) -> FeatureModel:
+    image = Image.open(requests.get(data.url, stream=True).raw)
     image = preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         image_feature = model.encode_image(image)

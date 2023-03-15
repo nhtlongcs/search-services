@@ -17,7 +17,7 @@ from pymilvus import CollectionSchema, FieldSchema, DataType
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
 from tqdm import tqdm
 import numpy as np
-
+import pytest
 config = {
     # Global config
     "HOST": "localhost",
@@ -28,6 +28,7 @@ config = {
     # Milvus config
     "DIMENSION": 768,
 }
+@pytest.mark.first
 def test_index_document(index_name: str = 'test'):
     print(MILVUS_PORT)
     connections.connect(

@@ -19,7 +19,7 @@ ELASTIC_PASSWORD = os.environ.get("ELASTIC_PASSWORD", None)
 assert ELASTIC_PORT is not None, "ELASTIC_PORT is not set"
 assert ELASTIC_USERNAME is not None, "ELASTIC_USERNAME is not set"
 assert ELASTIC_PASSWORD is not None, "ELASTIC_PASSWORD is not set"
-
+import pytest 
 document_structure = {  
     "mappings": {
         "properties": {
@@ -31,7 +31,7 @@ document_structure = {
         }
     }
 }
-
+@pytest.mark.first
 def test_es_connection():
     es = Elasticsearch([f'http://0.0.0.0:{ELASTIC_PORT}'],
                         timeout=100, \
@@ -57,7 +57,7 @@ def test_index_created(index_name: str = 'test'):
     responses = es.search(index=index_name, body=body)['hits']['hits']
     assert len(responses) > 0, "index is not created"
 
-
+@pytest.mark.first
 def test_index_document(index_name: str = 'test'):
     def gendata(n: int = 10):
         features = np.ones((n, 768), dtype=float)
