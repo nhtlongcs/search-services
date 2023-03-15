@@ -12,14 +12,15 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 class Milvus2Processor(Processor):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], autoload_collection: bool = True):
         super().__init__(config)
         assert 'DIMENSION' in config, "DIMENSION is not defined in config"
         self.dimension = config['DIMENSION']
         self.topk = config['RETURN_SIZE']
         self.client = self._connect()
         self.collection = self.create_milvus_collection(self.index)
-        self.collection.load()
+        if autoload_collection:
+            self.collection.load()
 
     def create_milvus_collection(self, collection_name):
         if utility.has_collection(collection_name):
