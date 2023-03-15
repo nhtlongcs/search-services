@@ -19,8 +19,15 @@ class Milvus2Processor(Processor):
         self.topk = config['RETURN_SIZE']
         self.client = self._connect()
         self.collection = self.create_milvus_collection(self.index)
+        self._available_indexes = None 
         if autoload_collection:
             self.collection.load()
+
+    def available_indexes(self) -> List[str]:
+        if self._available_indexes is None:
+            self._available_indexes = self.collection.query(expr="id != \"\"")
+            self._available_indexes = [x['id'] for x in self._available_indexes]
+        return self._available_indexes
 
     def create_milvus_collection(self, collection_name):
         if utility.has_collection(collection_name):
