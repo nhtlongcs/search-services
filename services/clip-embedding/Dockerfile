@@ -64,6 +64,8 @@ ENV PYTORCH_VERSION ${PYTORCH_VERSION}
 # # # Install repo dependencies 
 COPY ./* $WORKDIR
 RUN pip install -r requirements.txt
+# mount cache dir to speed up download
+RUN --mount=type=cache,id=clip-ckpt,target=/home/$USERNAME/.cache/clip
 
 USER $USERNAME
 # give permission to user

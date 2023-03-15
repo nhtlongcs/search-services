@@ -5,4 +5,5 @@ import clip
 model_name = "ViT-L/14@336px"
 model_name = sys.argv[1] if len(sys.argv) > 1 else model_name
 
+
 _, _ = clip.load(model_name, device='cpu')
