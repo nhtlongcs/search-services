@@ -21,18 +21,17 @@ channels:
   - conda-forge
 
 dependencies:
-  - pytest
   - elasticsearch=7.13.4
-  - elasticsearch-dsl
+  # - elasticsearch-dsl
   - python-dotenv
-  # - pymilvus=1.1.0 # compatible with milvus 1.1.0 (which this repo uses)
-  - pymilvus=2.1.0 # compatible with milvus 2.1.0 (which this repo uses)
   - requests
   - tqdm
   - numpy
   - notebook
   - pandas
   - pip  
+  - pytest
   - pip:
-    - fastapi
-    - e . # install the package in the current directory
+  # - pymilvus=1.1.0 # compatible with milvus 1.1.0 (which deprecated)
+    - pymilvus==2.1.0 # compatible with milvus 2.1.0 (which this repo uses)
+    - -e . # install the package in the current directory
