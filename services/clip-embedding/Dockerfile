@@ -61,14 +61,15 @@ ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 ENV PYTORCH_VERSION ${PYTORCH_VERSION}
 
+USER $USERNAME
+# # # give permission to user
+RUN conda init bash
 # # # Install repo dependencies 
+RUN pip install git+https://github.com/openai/CLIP.git 
+RUN python -c "import clip; clip.load('$CLIP_VERSION', device='cpu')"
+
 COPY ./* $WORKDIR
 RUN pip install -r requirements.txt
-# mount cache dir to speed up download
-RUN --mount=type=cache,id=clip-ckpt,target=/home/$USERNAME/.cache/clip
 
-USER $USERNAME
-# give permission to user
-RUN conda init bash
-RUN python download_ckpt.py $CLIP_VERSION
+
 
