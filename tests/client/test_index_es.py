@@ -9,6 +9,7 @@ from elasticsearch import Elasticsearch, RequestError, RequestsHttpConnection
 from elasticsearch.helpers import bulk
 from tqdm import tqdm
 
+
 dotenv_path = Path('.env')
 load_dotenv(dotenv_path=dotenv_path)
 
@@ -20,6 +21,7 @@ assert ELASTIC_PORT is not None, "ELASTIC_PORT is not set"
 assert ELASTIC_USERNAME is not None, "ELASTIC_USERNAME is not set"
 assert ELASTIC_PASSWORD is not None, "ELASTIC_PASSWORD is not set"
 import pytest 
+
 document_structure = {  
     "mappings": {
         "properties": {
@@ -31,7 +33,7 @@ document_structure = {
         }
     }
 }
-@pytest.mark.first
+@pytest.mark.order("first")
 def test_es_connection():
     es = Elasticsearch([f'http://0.0.0.0:{ELASTIC_PORT}'],
                         timeout=100, \
@@ -57,7 +59,7 @@ def test_index_created(index_name: str = 'test'):
     responses = es.search(index=index_name, body=body)['hits']['hits']
     assert len(responses) > 0, "index is not created"
 
-@pytest.mark.first
+@pytest.mark.order("first")
 def test_index_document(index_name: str = 'test'):
     def gendata(n: int = 10):
         features = np.ones((n, 768), dtype=float)
@@ -159,4 +161,12 @@ def test_vector_search(index_name: str = 'test'):
         assert responses[0]['_id'] == '7', "vector search is not working, expected id 7 but got {}".format(responses[0]['_id'])
     except RequestError as e:
         print(e.info['error'])
-
+@pytest.mark.order("last")
+def test_delete_index(index_name: str = 'test'):
+    es = Elasticsearch([f'http://0.0.0.0:{ELASTIC_PORT}'],
+                        timeout=100, \
+                        connection_class=RequestsHttpConnection, 
+                        http_auth=(ELASTIC_USERNAME, ELASTIC_PASSWORD), 
+                        use_ssl=False, 
+                        verify_certs=False)
+    es.indices.delete(index=index_name, ignore=[400, 404])
