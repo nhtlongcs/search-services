@@ -28,7 +28,8 @@ config = {
     # Milvus config
     "DIMENSION": 768,
 }
-@pytest.mark.first
+
+@pytest.mark.order("first")
 def test_index_document(index_name: str = 'test'):
     print(MILVUS_PORT)
     connections.connect(
@@ -172,3 +173,12 @@ def test_search_with_string_filter(index_name: str = 'test'):
     result = results[0].ids
     assert result[0] == expected_top1, "Expected top1 id is not equal to the result"
 
+@pytest.mark.order("last")
+def test_delete(index_name: str = 'test'):
+    connections.connect(
+        alias="default", 
+        host=config['HOST'], 
+        port=config['PORT'],
+    )
+    collection = Collection(name=index_name)
+    collection.drop_index()

@@ -32,6 +32,7 @@ dependencies:
   - pandas
   - pip  
   - pytest
+  - pytest-order
   - pip:
   # - pymilvus=1.1.0 # compatible with milvus 1.1.0 (which deprecated)
     - pymilvus==2.1.0 # compatible with milvus 2.1.0 (which this repo uses)
