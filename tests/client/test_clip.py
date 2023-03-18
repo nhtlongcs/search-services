@@ -26,7 +26,3 @@ def test_encode_image(image_url="https://upload.wikimedia.org/wikipedia/commons/
 
     response = response.json() 
     assert response['feature'] is not None
-
-print(CLIP_PORT)
-# test_encode_image()
-test_text_encode()
