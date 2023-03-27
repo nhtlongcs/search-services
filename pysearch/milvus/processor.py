@@ -16,7 +16,7 @@ class Milvus2Processor(Processor):
         super().__init__(config)
         assert 'DIMENSION' in config, "DIMENSION is not defined in config"
         self.dimension = config['DIMENSION']
-        self.topk = config['RETURN_SIZE']
+        self.topk: int = config['RETURN_SIZE']
         self.client = self._connect()
         self.collection = self.create_milvus_collection(self.index)
         self._available_indexes = None 
@@ -87,13 +87,14 @@ class Milvus2Processor(Processor):
 
     
     @time_this
-    def search(self, query_embedding: np.ndarray, top_k: Optional[int] = None, return_distance: bool = True, filter: Optional[List[str]] = None):
+    def search(self, 
+               query_embedding: np.ndarray, 
+               top_k: Optional[int] = None, 
+               return_distance: bool = True, 
+               filter: Optional[List[str]] = None) -> tuple[list[str], list[float]] | list[str]:
         
         if len(query_embedding.shape) != 2:
-            logger.critical("Invalid shape for feature vector!")
-            return None
-
-        search_params = {"metric_type": "L2", "params": {"nprobe": min(1024, top_k)}}
+            raise ValueError("Invalid shape for feature vector!")
         
         expr = None
         if filter is not None:
@@ -103,6 +104,8 @@ class Milvus2Processor(Processor):
             top_k = self.topk
         
         assert top_k > 0, "top_k must be greater than 0"
+
+        search_params = {"metric_type": "L2", "params": {"nprobe": min(1024, top_k)}}
 
         results = self.collection.search(
             data=query_embedding, 
