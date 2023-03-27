@@ -29,12 +29,12 @@ class Milvus2Processor(Processor):
             self._available_indexes = [x['id'] for x in self._available_indexes]
         return self._available_indexes
     
-    def get_document_by_id(self, ids: List[str]):
+    def get_document_by_id(self, ids: List[str]) -> list[list[float]]:
         expr = 'id in [' + ','.join([f'\"{id}\"' for id in ids]) + ']'
         res = self.collection.query(expr=expr, output_fields=['embedding'])
         return [x['embedding'] for x in res]
     
-    def create_milvus_collection(self, collection_name):
+    def create_milvus_collection(self, collection_name: str):
         if utility.has_collection(collection_name):
             return Collection(name=collection_name)
         
