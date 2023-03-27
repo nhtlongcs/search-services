@@ -24,7 +24,7 @@ logger.info(f"CLIP {model_name} successfully loaded")
 def read_root() -> dict[str, str]:
     return {"Hello": "World"}
 
-@get("/api/text/{text:str}")
+@get("/api/text/")
 def encode_text(text: str) -> FeatureModel:
     logger.info(f"Encoding text {text}")
     with torch.no_grad():
