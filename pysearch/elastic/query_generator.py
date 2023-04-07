@@ -62,6 +62,14 @@ class QueryGenerator:
             self.FILTER.append(pattern)
         else:
             self.MUST.append(pattern)
+
+    def gen_multi_term_query(self, field, values, is_filter=True):
+        # values is a list
+        pattern = {'bool': {'should': [{"term": {field: value}} for value in values]}}
+        if is_filter:
+            self.FILTER.append(pattern)
+        else:
+            self.MUST.append(pattern)
     
     def gen_closest_time_query(self, field, value):
         # closest value with smallest distance
@@ -133,6 +141,7 @@ class QueryGenerator:
             bool_query["should"] = self.SHOULD
         if len(self.FILTER) > 0:
             bool_query["filter"] = self.FILTER
+
         if len(bool_query) > 0:
             query["query"] = {"bool": bool_query}
         if self.FUNCTION_SCORE:
@@ -142,5 +151,3 @@ class QueryGenerator:
         if profiler:
             query["profile"] = False
         return query
-
-

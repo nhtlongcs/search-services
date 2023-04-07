@@ -105,6 +105,11 @@ class ElasticProcessor(Processor):
         return self.compose_pipeline({  'filter': filter, 'time': {'field': timefield, 'start': start, 'end': end}, \
                                         'text': {'fields': fields, 'should': text_query, 'must': None}})
 
+
+    def search_by_tags_pipeline(self, text_query: str, fields: Optional[List[Any]], tags: Dict[str, List[str]], filter: List[str]):
+        return self.compose_pipeline({'filter': filter, 'tags': tags, 
+                                      'text': {'fields': fields, 'should': text_query, 'must': None}})
+    
     def search_timestamp_pipeline(self, timefield: str, timestamp: datetime, filter: List[str]):
         """
             Example: search_time_range_pipeline('timestamp', '20200101', '20200110', ['image1', 'image2'])
@@ -141,6 +146,9 @@ class ElasticProcessor(Processor):
         assert len(query) > 0, "Query cannot be empty"
         if query.get('filter') is not None:
             self._filter(query['filter'])
+        if query.get('tags') is not None:
+            self._filterByTags(query['tags'])
+
         if query.get('time') is not None:
             if 'timestamp' in query['time'].keys():
                 self._search_time_fields(query['time']['field'], query['time']['timestamp'])
@@ -153,8 +161,39 @@ class ElasticProcessor(Processor):
             self._search_normal_fields(query['text']['fields'], query['text']['must'], query['text']['should'])
 
         query = self.generator.run(profiler=False)
+        # from pprint import pprint
+        # pprint(query)
         result = self.client.search(index=self.index, body=json.dumps(query), size=topk)
         return result['hits']['hits']
+
+    def _filterByTags(self, filterDict):
+        """
+        For each tag, generate a query that must match the tag
+        Expectation:
+        tags = ['tag1', 'tag2', 'tag3']
+        filter_dict = {
+            'tag1': [value1, value2, value3],
+            'tag2': [value1, value2, value3],
+        }
+        Example:
+        tags = ['Month', 'Year']
+        filter_dict = {
+            'Month': ['January', 'February', 'March'],
+            'Year': ['2018', '2019', '2020'],
+        }
+        """
+        tags = filterDict.keys()
+        for tag in tags:
+            values = filterDict[tag]
+            index_values = []
+            for value in values:
+                try:
+                    if not(isinstance(value, str)):
+                        value = str(value)
+                except Exception as e:
+                    raise Exception("Value of tag {} must be a string".format(tag))
+                index_values.append(value.lower())
+            self.generator.gen_multi_term_query(tag, index_values)
 
     def _filter(self, filter: Optional[List[str]] = None):
         if filter is not None and len(filter) > 0 :
