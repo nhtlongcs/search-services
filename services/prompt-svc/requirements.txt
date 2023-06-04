@@ -1,0 +1,7 @@
+# Required by OpenAI
+tiktoken
+openai
+# Required for the server
+python-dotenv
+starlite
+uvicorn
