@@ -26,6 +26,8 @@ dependencies:
   - python-dotenv
   - protobuf
   - requests
+  - tiktoken
+  - openai
   - tqdm
   - numpy
   - notebook

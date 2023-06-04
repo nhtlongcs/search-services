@@ -1,0 +1,1 @@
+DOCKER_BUILDKIT=1 docker build -t nhtlongcs/prompt-svc:latest .
