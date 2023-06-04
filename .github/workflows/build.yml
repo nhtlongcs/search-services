@@ -34,7 +34,7 @@ jobs:
           tags: nhtlongcs/first-clip:latest
         
       - name: Build and Push Prompt Docker Image
-        id: docker_build
+        id: docker_build_2
         uses: docker/build-push-action@v3
         with:
           context: services/prompt-svc/
