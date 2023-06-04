@@ -1,7 +1,8 @@
 import os
 
 from dotenv import load_dotenv; load_dotenv()
-SVC_PORT = os.getenv("SVC_PORT")
+# SVC_PORT = os.getenv("SVC_PORT")
+SVC_PORT = 20922
 import asyncio
 
 import httpx

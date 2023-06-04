@@ -4,9 +4,9 @@ FROM ${BASE_IMAGE} as base
 
 WORKDIR /module
 
-COPY ./src ./
 COPY ./requirements.txt ./
 RUN pip install -r requirements.txt
+COPY ./src/ ./src/
 
 EXPOSE 8000
 WORKDIR /module/src/

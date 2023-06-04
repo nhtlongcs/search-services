@@ -4,7 +4,6 @@ from typing import Any, List, Optional, Union
 import openai
 from dotenv import load_dotenv
 from starlite import Starlite, get, post
-# from fastapi import FastAPI, Request, Response
 from schema.dtypes import RequestModel, ResponseModel
 
 load_dotenv()

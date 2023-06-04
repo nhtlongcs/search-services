@@ -3,19 +3,19 @@ version: "3.9"
 services:
   prompt-suggestion:
     image: nhtlongcs/prompt-svc:latest
-    container_name: prompt-svc
-    build:
-      context: .
+    container_name: prompt-svc-2
+    # build:
+    #   context: .
     environment:
       - OPENAI_API_KEY=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
     ports:
       - 8002:8000
-    networks:
-      - vnet
-    volumes:
-      - ./src:/module/src #dev
-      - ./tests:/module/tests #dev`
+    # networks:
+    #   - vnet
+    # volumes:
+    #   - ./src:/module/src #dev
+    #   - ./tests:/module/tests #dev`
 
-networks:
-  vnet:
-    name: vnet
+# networks:
+#   vnet:
+#     name: vnet
