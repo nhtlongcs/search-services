@@ -18,10 +18,12 @@ services:
   prompt-suggestion:
     image: nhtlongcs/prompt-svc:latest
     container_name: prompt-svc
-    build:
-      context: .
+    env_file: 
+      - .env
+    # build:
+    #   context: .
     environment:
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     ports:
       - ${PROMPT_PORT}:8000
   elasticsearch:
