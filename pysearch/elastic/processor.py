@@ -259,13 +259,28 @@ class ElasticProcessor(Processor):
 
     @time_this
     def get_document_by_id(self, ids):
+        index = self.index
         query = {
             "query": {
-                "ids" : {
-                    "values" : ids
+                "bool": {
+                    "must": [
+                        {
+                            "ids": {
+                                "values": ids
+                            }
+                        },
+                        {
+                            "match": {
+                                "_index": index
+                            }
+                        }
+
+                    ]
                 }
             }
         }
+
+
         result = self.client.search(query, size=self.return_size)
         return result['hits']['hits']
 
