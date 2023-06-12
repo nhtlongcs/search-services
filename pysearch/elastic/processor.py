@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Union, Optional
 from datetime import datetime
 
 class ElasticProcessor(Processor):
-    def __init__(self, config):
+    def __init__(self, config, max_result_window=1000000):
         # convert dict to namespace
         config = argparse.Namespace(**config)
 
@@ -21,6 +21,8 @@ class ElasticProcessor(Processor):
         self.password = config.PASSWORD
         self.return_size = config.RETURN_SIZE
         self.client = self._connect()
+        # change elastic _settings, index.max_result_window to 1000000
+        self.client.indices.put_settings(index=self.index, body={"index": {"max_result_window": max_result_window}})
         # self.analyser = QueryAnalyser(self.generator)
     
     def index_dataframe(self, df, df_structure):

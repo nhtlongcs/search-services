@@ -144,5 +144,6 @@ class Milvus2Processor(Processor):
             "name": self.collection.name,
             "description": self.collection.description,
             "num_entities": self.collection.num_entities,
-            "collections": utility.list_collections()
+            "collections": utility.list_collections(),
+            "details": [index.params for index in self.collection.indexes]
         }
