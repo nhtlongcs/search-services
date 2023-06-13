@@ -32,6 +32,8 @@ services:
     env_file: 
       - .env
     environment:
+      - http.max_content_length=2000mb
+      - index.max_result_window=1000000
       - bootstrap.memory_lock=true
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms2g -Xmx2g"

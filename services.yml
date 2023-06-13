@@ -15,8 +15,6 @@
 # This is Conda environment file
 # Usage: `conda env update -f environment.yml`
 
-name: services2
-
 channels:
   - conda-forge
 
